@@ -3,11 +3,16 @@ import logging
 import logging.handlers
 import smtplib
 
+import Handlers
+
+# uses SMTP for sending and IMAP for receiving
+# https://automatetheboringstuff.com/chapter16/
+
 project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
+smtp_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
 
-
-# https://automatetheboringstuff.com/chapter16/
+mail_handlers = {"xing.com": Handlers.format_xing}
 
 
 def read_login():
@@ -51,7 +56,7 @@ def init_logger():
     return logger
 
 
-def connect_smtp(logger, mail):
+def connect_smtp(logger, mail, password):
     """ start the connection """
 
     host = mail.split("@")[1]
@@ -75,12 +80,22 @@ def connect_smtp(logger, mail):
     response = smtp_obj.starttls()  # start encryption (if possible)
     logging.debug(response)
 
-    # TODO login
-    # TODO use special gmail key if needed
+    logger.info(f"Logging in")      # TODO use special gmail key if needed
+    try:
+        response = smtp_obj.login(mail, password)
+    except smtplib.SMTPAuthenticationError as e:
+        logging.error(f"Login not accepted. Check if you have \"less secure app access\" "
+                      f"turned on: https://myaccount.google.com/lesssecureapps")
+
+        logging.error(e)
+        exit(4)
+
+    logger.info(f"Successful. Ready to send & receive")
+
+    return smtp_obj
 
 
 def main():
-
     logger = init_logger()
     logger.info(f"\n\n--- Welcome to {project_name} ---\n")
 
@@ -93,12 +108,27 @@ def main():
         logger.error("Created file, fill out and restart")
         exit(1)
 
-    logger.info(f"Found mail address <{mail}> with password <{password}>")  # TODO obfuscate PW
+    logger.info(f"Found mail address <{mail}> with password <{'*' * len(password)}>")
+    logger.info(f"Starting IMAP to receive and SMTP to send")
 
-    connect_smtp(logger, mail)
+    # TODO connect IMAP to get mails
+    #imap_client
+    smtp_client = connect_smtp(logger, mail, password)  # get ready to send
 
+    # TODO search original FROM (before forwarding) and match to dictionary of handlers
+    # mail_list = imap_client.search( EACH mail_handlers.keys())
+    # TODO remove DEBUG
+    mail_list = [{"from": "xing.com"}, {"from": "xing.com"}]      # list of mails with matching FROM
 
+    # call handlers with received matching mail
+    for mail in mail_list:
+        mail_handlers[mail["from"]](mail)
 
+    logger.info("Cleaning up, closing connections")
+    #imap_client.quit()
+    smtp_client.quit()   # close connection
+
+    logger.info("Done.")
 
 if __name__ == "__main__":
     main()
