@@ -1,16 +1,22 @@
 import configparser
 import logging
 import logging.handlers
-import smtplib
+import time
 
+# external
+import smtplib
+import imapclient
+
+# custom
 import Handlers
 
 # uses SMTP for sending and IMAP for receiving
 # https://automatetheboringstuff.com/chapter16/
+# use GMail API instead? -> more complex but more secure, "processing" account can be wherever it wants
 
 project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
-smtp_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
+imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
 
 mail_handlers = {"xing.com": Handlers.format_xing}
 
@@ -36,8 +42,14 @@ def create_config():
         config.write(ini)
 
 
-def init_logger():
-    """" prepare logging to file & stream """
+def get_logger():
+    """" prepare logging to file & stream. Can be called multiple times """
+
+    # singleton, value only present if previously executed
+    if "logger" in get_logger.__dict__:
+        get_logger.logger.warning("Prevented double initialisation of logger")
+        return get_logger.logger
+
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)  # minimum level
 
@@ -50,14 +62,16 @@ def init_logger():
     # logging >=info to stdout
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    ch.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     logger.addHandler(ch)
+
+    get_logger.logger = logger
 
     return logger
 
 
 def connect_smtp(logger, mail, password):
-    """ start the connection """
+    """ prepare the connection to send mails """
 
     host = mail.split("@")[1]
     try:
@@ -90,13 +104,41 @@ def connect_smtp(logger, mail, password):
         logging.error(e)
         exit(4)
 
-    logger.info(f"Successful. Ready to send & receive")
+    logger.debug(response)
+
+    logger.info(f"Successful. Ready to send")
 
     return smtp_obj
 
 
+def connect_imap(logger, mail, password):
+    """ prepare the connection to receive mails """
+
+    host = mail.split("@")[1]
+    try:
+        imap_domain = imap_provider[host]
+    except KeyError:
+        logger.error(f"IMAP-Provider {host} is unknown, exiting")
+        # TODO try imap.XX before giving up
+        exit(2)
+
+    logger.info(f"Connecting to {imap_domain}")
+    imap_obj = imapclient.IMAPClient(imap_domain, ssl=True)
+
+    logger.info(f"Logging in")  # TODO use special gmail key if needed
+
+    response = imap_obj.login(mail, password)
+    logger.debug(response)
+
+    # TODO get mails
+
+    logger.info(f"Successful. Ready to receive")
+
+    return imap_obj
+
 def main():
-    logger = init_logger()
+    logger = get_logger()
+
     logger.info(f"\n\n--- Welcome to {project_name} ---\n")
 
     logger.debug("Starting up")
@@ -111,9 +153,12 @@ def main():
     logger.info(f"Found mail address <{mail}> with password <{'*' * len(password)}>")
     logger.info(f"Starting IMAP to receive and SMTP to send")
 
-    # TODO connect IMAP to get mails
-    #imap_client
+    # connect to database
+    imap_client = connect_imap(logger, mail, password)
     smtp_client = connect_smtp(logger, mail, password)  # get ready to send
+
+    # TODO remove DEBUG
+    time.sleep(1)
 
     # TODO search original FROM (before forwarding) and match to dictionary of handlers
     # mail_list = imap_client.search( EACH mail_handlers.keys())
@@ -124,8 +169,11 @@ def main():
     for mail in mail_list:
         mail_handlers[mail["from"]](mail)
 
+    # TODO remove DEBUG
+    time.sleep(1)
+
     logger.info("Cleaning up, closing connections")
-    #imap_client.quit()
+    imap_client.logout()
     smtp_client.quit()   # close connection
 
     logger.info("Done.")
