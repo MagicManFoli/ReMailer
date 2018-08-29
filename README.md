@@ -1,4 +1,4 @@
 # ReMailer
 
-run this service for a email adress and all forwarded messages from XING are being decoded and send back automatically.
+Run this service for an email adress and all forwarded messages from XING are being decoded and send back automatically.
 
