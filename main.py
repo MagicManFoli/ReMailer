@@ -18,7 +18,7 @@ project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
 imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
 
-mail_handlers = {"xing.com": Handlers.format_xing}
+mail_handlers = {"mailrobot@mail.xing.com": Handlers.format_xing}
 
 
 def read_login():
@@ -136,8 +136,10 @@ def connect_imap(logger, mail, password):
 
     return imap_obj
 
+
 def main():
     logger = get_logger()
+    Handlers.logger = logger
 
     logger.info(f"\n\n--- Welcome to {project_name} ---\n")
 
@@ -157,26 +159,34 @@ def main():
     imap_client = connect_imap(logger, mail, password)
     smtp_client = connect_smtp(logger, mail, password)  # get ready to send
 
-    # TODO remove DEBUG
-    time.sleep(1)
+    logger.info("Ready!")
 
-    # TODO search original FROM (before forwarding) and match to dictionary of handlers
-    # mail_list = imap_client.search( EACH mail_handlers.keys())
-    # TODO remove DEBUG
-    mail_list = [{"from": "xing.com"}, {"from": "xing.com"}]      # list of mails with matching FROM
+    # smtp_client.sendmail(mail, mail, "Subject: Test Call\nHello Me, nice to see you")
 
-    # call handlers with received matching mail
-    for mail in mail_list:
-        mail_handlers[mail["from"]](mail)
+    imap_client.select_folder("INBOX", readonly=True)   # TODO delete mail after processing?
 
-    # TODO remove DEBUG
-    time.sleep(1)
+    # search original FROM (before forwarding) and match to dictionary of handlers
+    for domain, handler in mail_handlers.items():   # execute code for all handlers
+        logger.debug(f"Searching for domain {domain}")
+
+        # gmail_search for more advanced search
+        mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])    # UID is identifier, get content with fetch
+        logger.info(f"Number of mails: {len(mail_UIDs)}")
+        logger.debug(mail_UIDs)
+
+        # call handlers with received matching mail
+        for mail in mail_UIDs:
+            # fetch mail content and unpack list
+            mail = imap_client.fetch(mail, ["BODY[]"])[mail]
+            handler(mail)
+            # TODO delete
 
     logger.info("Cleaning up, closing connections")
     imap_client.logout()
-    smtp_client.quit()   # close connection
+    smtp_client.quit()
 
     logger.info("Done.")
+
 
 if __name__ == "__main__":
     main()
