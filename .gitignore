@@ -1,4 +1,5 @@
 .idea
 login.ini
 *.log
-
+*.log*
+*.tmp

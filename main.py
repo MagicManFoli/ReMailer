@@ -12,7 +12,11 @@ import Handlers
 
 # uses SMTP for sending and IMAP for receiving
 # https://automatetheboringstuff.com/chapter16/
-# use GMail API instead? -> more complex but more secure, "processing" account can be wherever it wants
+# use GMail API instead? -> more complex but more secure, "processing" account can alwys be separete
+
+# TODO messages with unknown domain should be answered with usage instructions
+# get all mails (old are deleted), sort by "FROM" and if forwarded or not
+# use handlers for known domains, answer (forwarded-from) for unknown domains with usage unstructions
 
 project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
@@ -159,27 +163,29 @@ def main():
     imap_client = connect_imap(logger, mail, password)
     smtp_client = connect_smtp(logger, mail, password)  # get ready to send
 
-    logger.info("Ready!")
+    logger.info("Ready! Starting to work on messages")
+    # Threading could encapsulate around here acting through a worker queue
 
-    # smtp_client.sendmail(mail, mail, "Subject: Test Call\nHello Me, nice to see you")
-
-    imap_client.select_folder("INBOX", readonly=True)   # TODO delete mail after processing?
+    imap_client.select_folder("INBOX", readonly=True)   # TODO False to delete mail after processing
 
     # search original FROM (before forwarding) and match to dictionary of handlers
     for domain, handler in mail_handlers.items():   # execute code for all handlers
         logger.debug(f"Searching for domain {domain}")
 
         # gmail_search for more advanced search
-        mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])    # UID is identifier, get content with fetch
-        logger.info(f"Number of mails: {len(mail_UIDs)}")
+        mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])    # UID is identifier
+        logger.info(f"Number of mails for {domain}: {len(mail_UIDs)}")
         logger.debug(mail_UIDs)
 
         # call handlers with received matching mail
         for mail in mail_UIDs:
-            # fetch mail content and unpack list
-            mail = imap_client.fetch(mail, ["BODY[]"])[mail]
-            handler(mail)
-            # TODO delete
+            # fetch mail content and unpack list to raw message
+            mail = imap_client.fetch(mail, ["BODY[]"])[mail][b"BODY[]"]
+            handler(mail, smtp_client)  # TODO not every handler needs to send, better place for client
+
+        # delete when everything was analysed
+        #imap_client.delete_messages(mail_UIDs)
+        #imap_client.expunge()
 
     logger.info("Cleaning up, closing connections")
     imap_client.logout()

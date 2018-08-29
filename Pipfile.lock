@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0420c9af2f34edac9816bb4bc63e3dd1fda236b75b6cf370385f7c45164b7daa"
+            "sha256": "7aa255905f67369a8ff7a7d767e6a02efbeb5a08ebda4d5dfb274398a55a541a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -23,6 +23,13 @@
             ],
             "index": "pypi",
             "version": "==2.0.0"
+        },
+        "pyzmail36": {
+            "hashes": [
+                "sha256:4ac22b663a2525422b15de7f1ca5e60983e1adb647debd14ae955963d4d6b098"
+            ],
+            "index": "pypi",
+            "version": "==1.0.3"
         },
         "six": {
             "hashes": [

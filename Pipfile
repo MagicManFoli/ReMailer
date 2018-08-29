@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 imapclient = "*"
+"pyzmail36" = "*"
 
 [dev-packages]
 
