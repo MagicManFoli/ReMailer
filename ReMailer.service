@@ -1,0 +1,10 @@
+[Unit]
+Description=Reformat mails from XING & Co
+After=network-online.target
+Requires=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/Remailer/main.py
+
+[Install]
+WantedBy=multi-user.target

@@ -7,7 +7,7 @@ logger = None   # set from main
 def format_xing(mail_raw, smtp_client):
     """" call with RFC 822 Mail body """
 
-    logger.info("formatting xing message")
+    logger.info("decoding XING message")
 
     mail = pyzmail.PyzMessage.factory(mail_raw)
 

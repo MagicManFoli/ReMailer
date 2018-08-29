@@ -1,22 +1,23 @@
 import configparser
 import logging
 import logging.handlers
-import time
-
 # external
 import smtplib
+
 import imapclient
 
 # custom
 import Handlers
 
 # uses SMTP for sending and IMAP for receiving
+# this script should be automated with a crontab or similar
+#
 # https://automatetheboringstuff.com/chapter16/
-# use GMail API instead? -> more complex but more secure, "processing" account can alwys be separete
 
 # TODO messages with unknown domain should be answered with usage instructions
 # get all mails (old are deleted), sort by "FROM" and if forwarded or not
 # use handlers for known domains, answer (forwarded-from) for unknown domains with usage unstructions
+# -> prevents multiuse of email adress for other services
 
 project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
@@ -98,7 +99,7 @@ def connect_smtp(logger, mail, password):
     response = smtp_obj.starttls()  # start encryption (if possible)
     logging.debug(response)
 
-    logger.info(f"Logging in")      # TODO use special gmail key if needed
+    logger.info(f"Logging in")  # TODO use special gmail key if needed
     try:
         response = smtp_obj.login(mail, password)
     except smtplib.SMTPAuthenticationError as e:
@@ -157,23 +158,22 @@ def main():
         exit(1)
 
     logger.info(f"Found mail address <{mail}> with password <{'*' * len(password)}>")
-    logger.info(f"Starting IMAP to receive and SMTP to send")
 
-    # connect to database
+    logger.info(f"Starting IMAP to receive and SMTP to send")
     imap_client = connect_imap(logger, mail, password)
     smtp_client = connect_smtp(logger, mail, password)  # get ready to send
 
     logger.info("Ready! Starting to work on messages")
     # Threading could encapsulate around here acting through a worker queue
 
-    imap_client.select_folder("INBOX", readonly=True)   # TODO False to delete mail after processing
+    imap_client.select_folder("INBOX", readonly=True)  # TODO False to delete mail after processing
 
     # search original FROM (before forwarding) and match to dictionary of handlers
-    for domain, handler in mail_handlers.items():   # execute code for all handlers
+    for domain, handler in mail_handlers.items():  # execute code for all handlers
         logger.debug(f"Searching for domain {domain}")
 
         # gmail_search for more advanced search
-        mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])    # UID is identifier
+        mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])  # UID is identifier
         logger.info(f"Number of mails for {domain}: {len(mail_UIDs)}")
         logger.debug(mail_UIDs)
 
@@ -184,8 +184,10 @@ def main():
             handler(mail, smtp_client)  # TODO not every handler needs to send, better place for client
 
         # delete when everything was analysed
-        #imap_client.delete_messages(mail_UIDs)
-        #imap_client.expunge()
+        if mail_UIDs:
+            logger.info(f"Deleting {len(mail_UIDs)} mails for {domain}")
+            imap_client.delete_messages(mail_UIDs)
+            imap_client.expunge()
 
     logger.info("Cleaning up, closing connections")
     imap_client.logout()
