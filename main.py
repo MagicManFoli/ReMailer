@@ -28,7 +28,7 @@ mail_handlers = {"mailrobot@mail.xing.com": Handlers.format_xing}
 
 def read_login():
     config = configparser.ConfigParser()
-    config.read(".\login.ini")
+    config.read("login.ini")
 
     mail = config.get("LOGIN", "email")
     password = config.get("LOGIN", "password")
@@ -43,7 +43,7 @@ def create_config():
     config.set("LOGIN", "email", "")
     config.set("LOGIN", "password", "")
 
-    with open(".\login.ini", "w") as ini:
+    with open("login.ini", "w") as ini:
         config.write(ini)
 
 
