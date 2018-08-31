@@ -4,7 +4,8 @@ After=network-online.target
 Requires=network-online.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/Remailer/main.py
+WorkingDirectory=/home/pi/ReMailer
+ExecStart=/usr/local/bin/pipenv run python /home/pi/ReMailer/main.py
 
 [Install]
 WantedBy=multi-user.target
