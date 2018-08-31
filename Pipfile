@@ -10,4 +10,4 @@ imapclient = "*"
 [dev-packages]
 
 [requires]
-python_version = "3.6"
+#python_version = "3.6" # version check disabled because >= not possible
