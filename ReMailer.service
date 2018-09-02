@@ -4,11 +4,9 @@ After=network-online.target
 Requires=network-online.target
 
 [Service]
-Type=simple
+Type=idle
 WorkingDirectory=/home/pi/ReMailer
-#ExecStartPre=/usr/local/bin/pipenv update
-#TimeoutStartSec=30
-ExecStart=/usr/local/bin/pipenv run python main.py
+ExecStart=/home/pi/.local/share/virtualenvs/ReMailer-A3UyrjCG/bin/python main.py
 
 [Install]
 WantedBy=multi-user.target
