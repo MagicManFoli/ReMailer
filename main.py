@@ -27,7 +27,7 @@ imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.co
 mail_handlers = {"mailrobot@mail.xing.com": Handlers.format_xing}
 
 # TODO read from arguments or environment
-t_restart = 60
+t_restart = 1800
 
 
 def read_login():
