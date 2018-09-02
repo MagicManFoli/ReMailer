@@ -3,6 +3,7 @@ import logging
 import logging.handlers
 # external
 import smtplib
+import time
 
 import imapclient
 
@@ -24,6 +25,9 @@ smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.co
 imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
 
 mail_handlers = {"mailrobot@mail.xing.com": Handlers.format_xing}
+
+# TODO read from arguments or environment
+t_restart = 60
 
 
 def read_login():
@@ -197,4 +201,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # the only reason to stop is an exception
+    while True:
+        main()
+        time.sleep(t_restart)

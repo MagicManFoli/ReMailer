@@ -3,3 +3,4 @@ login.ini
 *.log
 *.log*
 *.tmp
+__pycache__
