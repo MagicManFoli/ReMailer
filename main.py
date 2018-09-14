@@ -1,4 +1,6 @@
 #!python3
+"""" read README.md for details """
+
 
 import configparser
 import logging
@@ -12,12 +14,10 @@ from typing import Tuple
 from imapclient import IMAPClient
 
 # custom
-import Handlers
+from Handlers import Handlers
 
 # uses SMTP for sending and IMAP for receiving
 # this script should be automated with a crontab or similar
-#
-# https://automatetheboringstuff.com/chapter16/
 
 # TODO messages with unknown domain should be answered with usage instructions
 # get all mails (old are deleted), sort by "FROM" and if forwarded or not
@@ -27,9 +27,6 @@ import Handlers
 project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
 imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
-
-# TODO invert list? 1 tag : n handlers OR 1 handler : n tags
-mail_handlers = {"mailrobot@mail.xing.com": Handlers.format_xing}
 
 # TODO read from arguments or environment
 t_restart = 1800
@@ -113,7 +110,7 @@ def connect_smtp(logger, mail: str, password: str) -> SMTP:
         smtp_domain = smtp_provider[host]
     except KeyError:
         logger.error(f"SMTP-Provider {host} is unknown, exiting")
-        # TODO try smtp.XX before giving up
+        # could try smtp.XX before giving up
         exit(2)
 
     logger.info(f"Connecting to {smtp_domain}")
@@ -167,7 +164,7 @@ def connect_imap(logger, mail: str, password: str) -> IMAPClient:
     logger.info(f"Connecting to {imap_domain}")
     imap_obj = IMAPClient(imap_domain, ssl=True)
 
-    logger.info(f"Logging in")  # TODO use special gmail key if needed
+    logger.info(f"Logging in")
 
     response = imap_obj.login(mail, password)
     logger.debug(response)
@@ -178,8 +175,11 @@ def connect_imap(logger, mail: str, password: str) -> IMAPClient:
 
 
 def main():
+    """
+    start program
+    """
+
     logger = get_logger()
-    Handlers.logger = logger
 
     logger.info(f"\n\n--- Welcome to {project_name} ---\n")
 
@@ -208,10 +208,12 @@ def main():
     logger.info("Ready! Starting to work on messages")
     # Threading could encapsulate around here acting through a worker queue
 
+    handlers = Handlers(smtp_client, mail_address, logger)
+
     imap_client.select_folder("INBOX", readonly=save_mode)  # False to delete mail after processing
 
     # search original FROM (before forwarding) and match to dictionary of handlers
-    for domain, handler in mail_handlers.items():  # search for mail for all handlers
+    for domain in handlers.sources:  # search for mail for all handlers
         logger.debug(f"Searching for domain {domain}")
 
         if extended_search:
@@ -229,7 +231,7 @@ def main():
             part_to_fetch = "BODY[]"  # ENVELOPE, RFC822, BODY[] possible
             wrapped_mail = imap_client.fetch(mail_id, [part_to_fetch])
             mail = wrapped_mail[mail_id][part_to_fetch.encode()]
-            handler(mail, smtp_client)  # TODO not every handler needs to send, better place for client?
+            handlers.handle(domain, mail)
 
         # delete when everything was analysed
         if mail_UIDs:
@@ -251,4 +253,4 @@ if __name__ == "__main__":
     # the only reason to stop is an exception
     while True:
         main()
-        time.sleep(t_restart)
+        time.sleep(t_restart)  # better than restarting externally?

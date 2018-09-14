@@ -1,3 +1,5 @@
+"""" simple test cases for receiving messages """
+
 import unittest
 
 from main import *
