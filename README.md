@@ -5,7 +5,7 @@ This Code will never return, so be prepared to kill it manually should the need 
 
 Additional structures for other handlers are prepared, this program will grow with it's requirements.
 
-Download this by "git clone"-ing this repository.
+Download this by "git clone"-ing this repository. Follow the instructions here to start it.
 
 **Feel free to add functionalities or post issues!**
 
@@ -20,8 +20,7 @@ If wanted start manually with `/prev/path/to/python main.py`, this should use th
 0. Start with previous chapter
 1. Edit ReMailer.service to reflect your working directory ("~" in this example) and your custom python version from before.
 2. Copy ReMailer.service `sudo cp ~/ReMailer/ReMailer.service /etc/systemd/system`
-2.5 call `sudo systemctl daemon-reload` to reload the service file if you needed multiple tries.
-
+(call `sudo systemctl daemon-reload` to reload the service file if you need multiple tries)
 3. Start Service manually to test everthing is working: `sudo systemctl start Remailer`
 4. Check status: `systemctl status ReMailer.service`
 5. Enable automatic execution: `sudo systemctl enable ReMailer`
