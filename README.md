@@ -5,6 +5,11 @@ This Code will never return, so be prepared to kill it manually should the need 
 
 Additional structures for other handlers are prepared, this program will grow with it's requirements.
 
+Warning: Mail-Provider differ in their behaviour. 
+1. Manually forwarding from Gmail cuts off the original text. This results in very short decoded messages.
+2. Filtering is more complex & acts as a silent redirect, but preserves the full message. *Use this if possible!*
+
+
 Download this by "git clone"-ing this repository. Follow the instructions here to start it.
 
 **Feel free to add functionalities or post issues!**

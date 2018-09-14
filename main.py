@@ -1,11 +1,15 @@
+#!python3
+
 import configparser
 import logging
 import logging.handlers
 # external
 import smtplib
 import time
+from smtplib import SMTP
+from typing import Tuple
 
-import imapclient
+from imapclient import IMAPClient
 
 # custom
 import Handlers
@@ -24,13 +28,21 @@ project_name = "ReMailer"
 smtp_provider = {"gmail.com": "smtp.gmail.com", "yahoo.com": "smtp.mail.yahoo.com"}
 imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.com"}
 
+# TODO invert list? 1 tag : n handlers OR 1 handler : n tags
 mail_handlers = {"mailrobot@mail.xing.com": Handlers.format_xing}
 
 # TODO read from arguments or environment
 t_restart = 1800
+save_mode = True
 
 
-def read_login():
+def read_login() -> Tuple[str, str]:
+    """
+    read login from file
+
+    :return: mail & password
+    """
+
     config = configparser.ConfigParser()
     config.read("login.ini")
 
@@ -41,7 +53,10 @@ def read_login():
 
 
 def create_config():
-    """" create base config to fill in """
+    """
+    create base config to fill in
+    """
+
     config = configparser.ConfigParser()
     config.add_section("LOGIN")
     config.set("LOGIN", "email", "")
@@ -52,7 +67,11 @@ def create_config():
 
 
 def get_logger():
-    """" prepare logging to file & stream. Can be called multiple times """
+    """
+    prepare logging to file & stream. Can be called multiple times .
+
+    :return: logger object
+    """
 
     # singleton, value only present if previously executed
     if "logger" in get_logger.__dict__:
@@ -79,8 +98,15 @@ def get_logger():
     return logger
 
 
-def connect_smtp(logger, mail, password):
-    """ prepare the connection to send mails """
+def connect_smtp(logger, mail: str, password: str) -> SMTP:
+    """
+    prepare the connection to send mails
+
+    :param logger: logging object
+    :param mail: string for mail, e.g.
+    :param password: string for password (not printed to log)
+    :return: connection object
+    """
 
     host = mail.split("@")[1]
     try:
@@ -91,7 +117,7 @@ def connect_smtp(logger, mail, password):
         exit(2)
 
     logger.info(f"Connecting to {smtp_domain}")
-    smtp_obj = smtplib.SMTP(smtp_domain, port=587)
+    smtp_obj = SMTP(smtp_domain, port=587)
 
     response = smtp_obj.ehlo()  # "hello server"
     logging.debug(response)
@@ -120,8 +146,15 @@ def connect_smtp(logger, mail, password):
     return smtp_obj
 
 
-def connect_imap(logger, mail, password):
-    """ prepare the connection to receive mails """
+def connect_imap(logger, mail: str, password: str) -> IMAPClient:
+    """
+    prepare the connection to receive mails
+
+    :param logger: logging object
+    :param mail: string for mail, e.g.
+    :param password: string for password (not printed to log)
+    :return: connection object
+    """
 
     host = mail.split("@")[1]
     try:
@@ -132,14 +165,12 @@ def connect_imap(logger, mail, password):
         exit(2)
 
     logger.info(f"Connecting to {imap_domain}")
-    imap_obj = imapclient.IMAPClient(imap_domain, ssl=True)
+    imap_obj = IMAPClient(imap_domain, ssl=True)
 
     logger.info(f"Logging in")  # TODO use special gmail key if needed
 
     response = imap_obj.login(mail, password)
     logger.debug(response)
-
-    # TODO get mails
 
     logger.info(f"Successful. Ready to receive")
 
@@ -154,44 +185,60 @@ def main():
 
     logger.debug("Starting up")
     try:
-        mail, password = read_login()
+        mail_address, password = read_login()
     except configparser.NoSectionError:
         logger.error("No file found, creating")
         create_config()
         logger.error("Created file, fill out and restart")
         exit(1)
 
-    logger.info(f"Found mail address <{mail}> with password <{'*' * len(password)}>")
+    logger.info(f"Found mail address <{mail_address}> with password <{'*' * len(password)}>")
+    host = mail_address.split("@")[1]
+    if host == "gmail.com":
+        logger.info("Congratulations, you have got extended search!")
+        extended_search = True
+    else:
+        logger.warning("No Gmail account, only basic search possible (might miss forwards!)")
+        extended_search = False
 
     logger.info(f"Starting IMAP to receive and SMTP to send")
-    imap_client = connect_imap(logger, mail, password)
-    smtp_client = connect_smtp(logger, mail, password)  # get ready to send
+    imap_client = connect_imap(logger, mail_address, password)
+    smtp_client = connect_smtp(logger, mail_address, password)  # get ready to send
 
     logger.info("Ready! Starting to work on messages")
     # Threading could encapsulate around here acting through a worker queue
 
-    imap_client.select_folder("INBOX", readonly=True)  # TODO False to delete mail after processing
+    imap_client.select_folder("INBOX", readonly=save_mode)  # False to delete mail after processing
 
     # search original FROM (before forwarding) and match to dictionary of handlers
-    for domain, handler in mail_handlers.items():  # execute code for all handlers
+    for domain, handler in mail_handlers.items():  # search for mail for all handlers
         logger.debug(f"Searching for domain {domain}")
 
-        # gmail_search for more advanced search
-        mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])  # UID is identifier
+        if extended_search:
+            mail_UIDs = imap_client.gmail_search("in: inbox, " + domain)  # better (gmail-only) search
+        else:
+            mail_UIDs = imap_client.search(['FROM', domain, "UNDELETED"])  # forwards are not detected)
+
+        # UID is identifier
         logger.info(f"Number of mails for {domain}: {len(mail_UIDs)}")
-        logger.debug(mail_UIDs)
+        logger.debug(f" IDS: {mail_UIDs}")
 
         # call handlers with received matching mail
-        for mail in mail_UIDs:
+        for mail_id in mail_UIDs:
             # fetch mail content and unpack list to raw message
-            mail = imap_client.fetch(mail, ["BODY[]"])[mail][b"BODY[]"]
-            handler(mail, smtp_client)  # TODO not every handler needs to send, better place for client
+            part_to_fetch = "BODY[]"  # ENVELOPE, RFC822, BODY[] possible
+            wrapped_mail = imap_client.fetch(mail_id, [part_to_fetch])
+            mail = wrapped_mail[mail_id][part_to_fetch.encode()]
+            handler(mail, smtp_client)  # TODO not every handler needs to send, better place for client?
 
         # delete when everything was analysed
         if mail_UIDs:
-            logger.info(f"Deleting {len(mail_UIDs)} mails for {domain}")
-            imap_client.delete_messages(mail_UIDs)
-            imap_client.expunge()
+            if not save_mode:
+                logger.info(f"Deleting {len(mail_UIDs)} mails for {domain}")
+                imap_client.delete_messages(mail_UIDs)
+                imap_client.expunge()
+            else:
+                logger.info(f"Skipped deleting {len(mail_UIDs)} mails for {domain}")
 
     logger.info("Cleaning up, closing connections")
     imap_client.logout()
