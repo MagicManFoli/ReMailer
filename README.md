@@ -8,6 +8,8 @@ Additional structures for other handlers are prepared, this program will grow wi
 
 *Feel free to add functionalities or post issues!*
 
+[For future Devs: Try using the XING API `https://dev.xing.com/docs/resources`, thats how it's meant to be done]
+
 ## Installation & Usage
 
 Download this by "git clone"-ing this repository. Follow the instructions below to start it.
