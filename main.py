@@ -30,7 +30,7 @@ imap_provider = {"gmail.com": "imap.gmail.com", "yahoo.com": "imap.mail.yahoo.co
 
 # TODO read from arguments or environment
 t_restart = 1800
-save_mode = True
+save_mode = False
 
 
 def read_login() -> Tuple[str, str]:

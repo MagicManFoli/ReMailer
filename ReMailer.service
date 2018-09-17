@@ -5,6 +5,8 @@ Requires=network-online.target
 
 [Service]
 Type=idle
+Restart=on-failure
+RestartSec=30s
 WorkingDirectory=/home/pi/ReMailer
 ExecStart=/home/pi/.local/share/virtualenvs/ReMailer-A3UyrjCG/bin/python main.py
 
