@@ -76,11 +76,11 @@ def get_logger():
         return get_logger.logger
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)  # minimum level
+    logger.setLevel(logging.INFO)  # minimum level
 
     # complete log in file
     fh = logging.handlers.RotatingFileHandler(f"{project_name}.log", maxBytes=1 * 1024 * 1024, backupCount=4)  # 1MB
-    fh.setLevel(logging.DEBUG)
+    fh.setLevel(logging.INFO)
     fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(fh)
 
