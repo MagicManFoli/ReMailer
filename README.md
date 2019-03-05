@@ -1,3 +1,10 @@
+
+**This should probably be ported to Docker instead of using systemd, but a new update from XING made this project obsolete.**  
+
+The XING API would have made more sense but is being discontinued: https://dev.xing.com/docs/resources
+
+----------
+
 # ReMailer
 
 Run this service for an email adress and all forwarded messages from XING (and other services later) are being decoded and send back automatically. 
@@ -8,7 +15,7 @@ Additional structures for other handlers are prepared, this program will grow wi
 
 *Feel free to add functionalities or post issues!*
 
-[For future Devs: Try using the XING API `https://dev.xing.com/docs/resources`, thats how it's meant to be done]
+
 
 ## Installation & Usage
 
